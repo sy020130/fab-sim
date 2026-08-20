@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FRONT FAB LAB — 3D 팹 시뮬레이터</title>
+<style>
+:root{--bg:#0b101d;--panel:#121a2e;--panel2:#0f1526;--line:#233052;--tx:#dfe7f5;--dim:#8494b8;--acc:#4da3ff;--amber:#ffc857;--ok:#3ddc97;--vio:#8f7bff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:16px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel2);z-index:5}
+header .logo{display:flex;align-items:center;gap:9px}
+header .logo .sq{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#2f6bff,#123)}
+header h1{font-size:15px;font-weight:800;letter-spacing:.4px}
+header .badge{font-size:10px;background:#1c2a4d;color:var(--acc);border:1px solid #2c4479;padding:2px 8px;border-radius:10px}
+#hud{margin-left:auto;display:flex;gap:26px;font-size:11px;color:var(--dim);align-items:center}
+#hud b{color:#fff;font-weight:700}#hud .k{display:block;font-size:9px;letter-spacing:1.2px;margin-bottom:2px}
+#hud .amber{color:var(--amber)}
+main{flex:1;display:flex;min-height:0}
+#stage{flex:1;position:relative;min-width:0}
+#cv{position:absolute;inset:0;display:block}
+#tip{position:absolute;pointer-events:none;background:rgba(10,16,32,.92);border:1px solid #2c4479;color:#cfe0ff;font-size:11px;padding:4px 9px;border-radius:6px;transform:translate(-50%,-140%);display:none;white-space:nowrap;z-index:4}
+#xsec{position:absolute;left:16px;bottom:104px;width:270px;background:rgba(13,20,38,.92);border:1px solid #24345c;border-radius:10px;padding:10px 12px;z-index:3}
+#xsec h4{font-size:10px;letter-spacing:1.5px;color:var(--dim);margin-bottom:6px}
+#xsecCv{width:100%;height:96px;display:block;background:#0a0f1e;border-radius:6px}
+#nextdest{position:absolute;left:16px;bottom:16px;border-left:3px solid var(--amber);padding:6px 12px;background:rgba(13,20,38,.85);border-radius:0 8px 8px 0;z-index:3}
+#nextdest .k{font-size:9px;letter-spacing:1.5px;color:var(--dim)}
+#nextdest .v{font-size:15px;font-weight:700;margin:2px 0}
+#nextdest .p{font-size:11px;color:var(--dim)}#nextdest .p b{color:var(--amber)}
+#legend{position:absolute;right:16px;bottom:16px;display:flex;gap:14px;font-size:10.5px;color:var(--dim);background:rgba(13,20,38,.8);padding:6px 12px;border-radius:8px;z-index:3}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+#camset{position:absolute;top:14px;right:16px;display:flex;gap:6px;z-index:3}
+#camset button{font-size:11px;padding:6px 11px}
+#keys{position:absolute;top:14px;left:16px;font-size:10px;color:#4a5d88;background:rgba(13,20,38,.7);padding:5px 10px;border-radius:7px;z-index:3}
+#keys b{color:#7d92bd}
+#side{width:332px;border-left:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel)}
+#side .rh{display:flex;align-items:center;padding:12px 14px 6px}
+#side .rh h2{font-size:11px;letter-spacing:1.5px;color:var(--dim);flex:1}
+#side .rh .chip{font-size:10px;color:var(--amber);border:1px solid #5b4a1c;background:#241d0b;border-radius:8px;padding:2px 8px}
+#route{flex:1;overflow-y:auto;padding:0 10px 10px}
+.step{display:flex;gap:9px;padding:8px;border-radius:9px;margin-bottom:3px;align-items:center;border:1px solid transparent}
+.step .no{font-size:10px;color:var(--dim);width:17px;text-align:right;font-variant-numeric:tabular-nums}
+.step .mid{flex:1;min-width:0}
+.step .nm{font-size:12.5px;font-weight:600}
+.step .eq{font-size:10px;color:var(--dim);margin-top:1px}
+.step .st{font-size:9px;letter-spacing:1px;color:var(--dim)}
+.step .go{font-size:9.5px;color:#9db4e4;background:#1a2440;border:1px solid #2b3a63;border-radius:6px;padding:3px 7px;cursor:pointer;white-space:nowrap}
+.step .go:hover{background:#223059}
+.step.now{background:#1b2a4e;border-color:#2e4a86}
+.step.now .nm{color:#fff}.step.now .st{color:var(--amber)}
+.step.done .nm{color:#5f6f93}.step.done .st{color:var(--ok)}
+.step .bar{height:3px;background:#1a2440;border-radius:2px;margin-top:5px;overflow:hidden;display:none}
+.step.now .bar{display:block}
+.step .bar i{display:block;height:100%;width:0;background:var(--amber)}
+#info{border-top:1px solid var(--line);padding:12px 14px;min-height:150px;max-height:230px;overflow-y:auto;background:var(--panel2)}
+#info h3{font-size:13px;color:var(--acc);margin-bottom:6px}
+#info p{font-size:12px;color:#b8c4de;line-height:1.66}
+#info .hint{color:var(--dim);font-size:11px;margin-top:6px}
+#log{height:76px;overflow-y:auto;border-top:1px solid var(--line);padding:7px 14px;font-size:10.5px;font-family:'SF Mono',Consolas,monospace;color:#7f9cc9;background:#0a0f1c}
+#log .t{color:#4a5b80}
+#controls{display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);background:var(--panel2);z-index:5}
+button{background:#1a2440;color:var(--tx);border:1px solid #2b3a63;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+button:hover{background:#223059}
+button.primary{background:var(--amber);color:#221c07;font-weight:800;border-color:var(--amber)}
+button.primary:hover{filter:brightness(1.07)}
+button.on{background:#274a2f;border-color:#3f7a4f;color:#a5f0c0}
+button:disabled{opacity:.35;cursor:default}
+select{background:#1a2440;color:var(--tx);border:1px solid #2b3a63;border-radius:8px;padding:7px 8px;font-size:13px;font-family:inherit}
+.sp{flex:1}
+#err{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#ff8f8f;font-size:14px;background:#0b101d;z-index:9;text-align:center;line-height:1.8}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#243356;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="sq"></div><h1>FRONT FAB LAB</h1></div>
+  <span class="badge">FRONT-END · 12 STEP ROUTE</span>
+  <div id="hud">
+    <div><span class="k">LOT</span><b>LOT-FE-2601</b></div>
+    <div><span class="k">현재 공정</span><b id="hudStep">대기</b></div>
+    <div><span class="k">STEP</span><b id="hudNo" class="amber">— / 12</b></div>
+    <div><span class="k">경과</span><b id="hudClock">00:00</b></div>
+  </div>
+</header>
+<main>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="tip"></div>
+    <div id="keys"><b>드래그</b> 회전 · <b>휠</b> 줌 · <b>우클릭 드래그</b> 이동 · <b>장비 클릭</b> 카메라 이동 · <b>Space</b> 실행/정지 · <b>N</b> 다음 · <b>R</b> 리셋</div>
+    <div id="camset">
+      <button data-cam="all">전체 FAB</button>
+      <button data-cam="oht">OHT 추적</button>
+      <button data-cam="bay">공정 Bay</button>
+      <button id="btnShow">쇼케이스</button>
+    </div>
+    <div id="xsec"><h4>WAFER CROSS SECTION</h4><canvas id="xsecCv" width="246" height="96"></canvas></div>
+    <div id="nextdest"><div class="k">NEXT DESTINATION</div><div class="v" id="ndName">Wafer In / 스토커</div><div class="p">진행률 <b id="ndPct">0%</b></div></div>
+    <div id="legend"><span><span class="dot" style="background:var(--amber)"></span>현재 Lot</span><span><span class="dot" style="background:#3a5fce"></span>OHT Rail</span><span><span class="dot" style="background:var(--ok)"></span>가동 장비</span><span><span class="dot" style="background:#c8a23a"></span>대기 장비</span></div>
+    <div id="err"></div>
+  </div>
+  <div id="side">
+    <div class="rh"><h2>WAFER ROUTE — Front-End</h2><span class="chip">12 STEP</span></div>
+    <div id="route"></div>
+    <div id="info">
+      <h3>3D 팹을 둘러보세요</h3>
+      <p>마우스로 회전·줌·이동할 수 있고, 장비를 클릭하면 카메라가 그 장비로 날아가며 설명이 열립니다. [Wafer 투입]을 누르면 OHT가 FOUP을 싣고 12개 공정을 순서대로 반송합니다.</p>
+      <p class="hint">이온주입(IMPLANT 01)과 계측(METRO 01) 카드에는 이 라우트에서 두 장비가 어떻게 서로를 검증하는지 적어 두었습니다.</p>
+    </div>
+    <div id="log"></div>
+  </div>
+</main>
+<div id="controls">
+  <button class="primary" id="btnRun">▶ Wafer 투입</button>
+  <button id="btnPause" disabled>⏸ 일시정지</button>
+  <button id="btnNext" disabled>다음 Step ›</button>
+  <button id="btnReset">처음부터</button>
+  <span style="font-size:12px;color:var(--dim);margin-left:6px">진행 속도</span>
+  <select id="speed"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option><option value="8">8×</option></select>
+  <span class="sp"></span>
+  <span style="font-size:10.5px;color:#4a5d88">NEXTRACK 스타일 오마주 · 교육용 일반 지식만 사용 · 3D: three.js</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+if(!window.THREE){document.getElementById("err").style.display="flex";
+  document.getElementById("err").innerHTML="three.js 로딩 실패 — 인터넷 연결 후 새로고침 해주세요.<br>(cdnjs.cloudflare.com 접근 필요)";}
+else (function(){
+
+/* ================= 기본 씬 ================= */
+const stage=document.getElementById("stage"), cvs=document.getElementById("cv");
+const renderer=new THREE.WebGLRenderer({canvas:cvs,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0b101d);
+scene.fog=new THREE.FogExp2(0x0b101d,0.0075);
+const camera=new THREE.PerspectiveCamera(50,1,0.1,600);
+
+scene.add(new THREE.HemisphereLight(0x4a6db0,0x070a12,0.95));
+const dl=new THREE.DirectionalLight(0x9db8ff,0.55); dl.position.set(-40,60,30); scene.add(dl);
+const dl2=new THREE.DirectionalLight(0x3355aa,0.25); dl2.position.set(40,30,-40); scene.add(dl2);
+
+/* 바닥 + 그리드 */
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(220,150),new THREE.MeshLambertMaterial({color:0x0c1222}));
+floor.rotation.x=-Math.PI/2; floor.position.y=-0.01; scene.add(floor);
+const grid=new THREE.GridHelper(220,88,0x1b2a4d,0x111a31); scene.add(grid);
+
+/* ================= 유틸 ================= */
+function label(text,scale=1,color="#9fb6e6"){
+  const c=document.createElement("canvas"); c.width=512; c.height=128;
+  const g=c.getContext("2d");
+  g.fillStyle="rgba(9,14,28,0.88)"; g.strokeStyle="#2c4479";
+  const w=g.measureText.call(Object.assign(g,{font:"600 44px Pretendard, sans-serif"}),text).width+56;
+  const x=(512-w)/2;
+  g.beginPath(); g.rect(x,26,w,76); g.fill(); g.stroke();
+  g.font="600 44px Pretendard, sans-serif"; g.fillStyle=color; g.textAlign="center"; g.textBaseline="middle";
+  g.fillText(text,256,66);
+  const t=new THREE.CanvasTexture(c); t.minFilter=THREE.LinearFilter;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));
+  s.scale.set(10*scale,2.5*scale,1); return s;
+}
+const box=(w,h,d,color)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color}));
+function edges(mesh,color=0x2c4479){
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color}));
+  mesh.add(e); return e;
+}
+
+/* ================= 장비 ================= */
+const tools=[]; const pickables=[];
+function makeTool(id,name,x,z,opt={}){
+  const g=new THREE.Group(); g.position.set(x,0,z);
+  const W=opt.w||5.6,H=opt.h||3,D=opt.d||4.6;
+  const body=box(W,H,D,0x17223e); body.position.y=H/2; g.add(body); edges(body);
+  const top=box(W*0.7,0.7,D*0.7,0x1e2c50); top.position.y=H+0.35; g.add(top); edges(top,0x30436f);
+  if(opt.cyl){ const c=new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,1.4,20),new THREE.MeshLambertMaterial({color:0x223154}));
+    c.position.set(W*0.22,H+0.7,0); g.add(c); }
+  /* 포트(로드포트) — 통로 쪽 */
+  const zs=Math.sign(z)||1;
+  const port=box(1.6,1.0,1.2,0x101a33); port.position.set(0,0.5,-zs*(D/2+0.75)); g.add(port); edges(port,0x263a66);
+  /* 상태등 */
+  const lamp=new THREE.Mesh(new THREE.SphereGeometry(0.22,10,10),new THREE.MeshBasicMaterial({color:0xc8a23a}));
+  lamp.position.set(-W/2+0.5,H+0.9,0); g.add(lamp);
+  /* 전면 스크린(발광) */
+  const scr=new THREE.Mesh(new THREE.PlaneGeometry(W*0.55,H*0.34),new THREE.MeshBasicMaterial({color:0x14335e}));
+  scr.position.set(0,H*0.55,-zs*(D/2+0.02)); if(zs>0)scr.rotation.y=Math.PI; g.add(scr);
+  const lb=label(name,0.85); lb.position.set(0,H+2.1,0); g.add(lb);
+  scene.add(g);
+  const tool={id,name,g,body,lamp,scr,x,z,zs,active:false,idlePhase:Math.random()*7,
+    portPos:new THREE.Vector3(x,1.05,z-zs*(D/2+0.75)), info:opt.info||null, railX:x, railZ: zs>0? 9 : -9};
+  tools.push(tool); pickables.push(body); body.userData.tool=tool;
+  return tool;
+}
+
+/* 레이아웃: 두 줄의 베이 (z=-15 앞줄, z=+15 뒷줄) */
+const ROW1=-15, ROW2=15;
+const T={};
+T.stk   =makeTool("stk","STOCKER · WAFER IN",-46,ROW1,{w:7,h:6.5,d:5.5,info:"infra"});
+T.cln1  =makeTool("cln1","CLEAN 01",-33,ROW1,{info:"clean"});
+T.fur   =makeTool("fur","FURNACE 01",-20,ROW1,{w:6.2,h:4.2,info:"fur"});
+T.pho   =makeTool("pho","PHOTO 01 · TRACK+SCANNER",-4.5,ROW1,{w:9.5,h:3.4,d:5.2,info:"pho"});
+T.etc   =makeTool("etc","ETCH 01",10,ROW1,{cyl:true,info:"etch"});
+T.ash   =makeTool("ash","ASH/CLEAN 02",23,ROW1,{info:"ash"});
+T.imp   =makeTool("imp","IMPLANT 01",41,ROW1,{w:11,h:3.6,d:5.4,info:"imp"});
+T.rtp   =makeTool("rtp","RTP 01 · ANNEAL",41,ROW2,{info:"rtp"});
+T.met   =makeTool("met","METRO 01 · TW/Rs",26,ROW2,{w:5,h:2.7,info:"met"});
+T.cvd   =makeTool("cvd","CVD 01",12,ROW2,{cyl:true,info:"cvd"});
+T.cmp   =makeTool("cmp","CMP 01",-2,ROW2,{info:"cmp"});
+T.met2  =makeTool("met2","FINAL METRO · WAFER OUT",-18,ROW2,{info:"met2"});
+/* 필러 장비 */
+makeTool("f1","DIFF 02",-33,ROW2,{info:"fur"}); makeTool("f2","ETCH 02",-46,ROW2,{cyl:true,info:"etch"});
+makeTool("f3","CVD 02",55,ROW2,{cyl:true,info:"cvd"}); makeTool("f4","CLEAN 03",55,ROW1,{info:"clean"});
+
+/* ================= OHT 레일 & 비클 ================= */
+const RAIL_Y=9;
+function railSeg(x1,z1,x2,z2){
+  const len=Math.hypot(x2-x1,z2-z1);
+  const m=box(len,0.22,0.5,0x2a3f76);
+  m.position.set((x1+x2)/2,RAIL_Y,(z1+z2)/2);
+  m.rotation.y=-Math.atan2(z2-z1,x2-x1); scene.add(m);
+}
+/* 레일 루프: 앞줄 통로(-9) → 오른쪽 연결 → 뒷줄 통로(9) → 왼쪽 연결 */
+const LOOP=[[-52,-9],[60,-9],[60,9],[-52,9]];
+for(let i=0;i<LOOP.length;i++){const a=LOOP[i],b=LOOP[(i+1)%LOOP.length];railSeg(a[0],a[1],b[0],b[1]);}
+/* 지주 */
+for(const [x,z] of [[-52,-9],[0,-9],[60,-9],[-52,9],[0,9],[60,9]]){
+  const p=box(0.3,RAIL_Y,0.3,0x1a2745); p.position.set(x,RAIL_Y/2,z); scene.add(p);
+}
+const loopLen=(()=>{let L=0;for(let i=0;i<LOOP.length;i++){const a=LOOP[i],b=LOOP[(i+1)%LOOP.length];L+=Math.hypot(b[0]-a[0],b[1]-a[1]);}return L;})();
+function loopPos(s){ s=((s%loopLen)+loopLen)%loopLen;
+  for(let i=0;i<LOOP.length;i++){const a=LOOP[i],b=LOOP[(i+1)%LOOP.length];
+    const seg=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    if(s<=seg){const t=s/seg;return {x:a[0]+(b[0]-a[0])*t,z:a[1]+(b[1]-a[1])*t};}
+    s-=seg;}
+  return {x:LOOP[0][0],z:LOOP[0][1]};
+}
+function loopS(x,z){ /* 레일 위 최근접 파라미터 */
+  let acc=0,best=0,bd=1e9;
+  for(let i=0;i<LOOP.length;i++){const a=LOOP[i],b=LOOP[(i+1)%LOOP.length];
+    const seg=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    for(let t=0;t<=1;t+=0.02){const px=a[0]+(b[0]-a[0])*t,pz=a[1]+(b[1]-a[1])*t;
+      const d=Math.hypot(px-x,pz-z); if(d<bd){bd=d;best=acc+seg*t;}}
+    acc+=seg;}
+  return best;
+}
+const oht=new THREE.Group();
+const car=box(2.4,1.1,1.3,0xdde6fb); car.position.y=RAIL_Y-0.85; oht.add(car); edges(car,0x8ea6d8);
+const hoist=box(0.14,1,0.14,0x9fb6e6); hoist.position.y=RAIL_Y-1.9; oht.add(hoist);
+const foup=box(1.5,1.4,1.5,0x8f7bff); foup.position.y=RAIL_Y-2.8; oht.add(foup); edges(foup,0xb9aaff);
+const lotGlow=new THREE.PointLight(0xffc857,0.0,10); lotGlow.position.y=RAIL_Y-2.8; oht.add(lotGlow);
+scene.add(oht);
+let ohtS=loopS(T.stk.railX,T.stk.railZ);
+
+/* ================= 라우트 정의 ================= */
+const ROUTE=[
+ {tool:T.stk, nm:"Wafer In / 로트 출고", proc:1.8, desc:"스토커에서 FOUP이 출고되어 OHT에 실립니다."},
+ {tool:T.cln1,nm:"세정 (Pre-Clean)",   proc:3.0, desc:"파티클·유기물·금속 오염을 제거합니다. 모든 공정의 출발점은 깨끗한 표면입니다."},
+ {tool:T.fur, nm:"산화 (Oxidation)",   proc:3.6, desc:"고온 퍼니스에서 SiO₂ 절연막을 성장시킵니다."},
+ {tool:T.pho, nm:"포토 (Photo)",       proc:4.0, desc:"트랙에서 PR 도포, 스캐너에서 노광, 다시 트랙에서 현상 — 회로 패턴을 새깁니다."},
+ {tool:T.etc, nm:"식각 (Etch)",        proc:3.6, desc:"PR이 없는 부분의 막을 플라즈마로 깎아 패턴을 전사합니다."},
+ {tool:T.ash, nm:"PR 스트립·세정",     proc:2.6, desc:"역할을 다한 PR을 애싱으로 제거하고 잔류물을 세정합니다."},
+ {tool:T.imp, nm:"이온주입 (Implant)", proc:4.6, desc:"도펀트 이온을 가속해 노출된 실리콘에 주입합니다. Dose·Energy·Angle 세 파라미터가 소자 특성을 결정합니다."},
+ {tool:T.rtp, nm:"어닐 (RTP)",         proc:3.0, desc:"급속 열처리로 격자 손상을 회복시키고 도펀트를 활성화합니다."},
+ {tool:T.met, nm:"계측 (TW·Rs)",       proc:2.6, desc:"어닐 전 손상(TW)과 어닐 후 활성화(Rs)를 계측해 임플란트가 스펙대로 됐는지 확인합니다."},
+ {tool:T.cvd, nm:"증착 (CVD)",         proc:3.6, desc:"배선·절연을 위한 박막을 화학 기상 증착으로 쌓습니다."},
+ {tool:T.cmp, nm:"평탄화 (CMP)",       proc:3.0, desc:"슬러리와 패드로 표면을 갈아 다음 포토가 가능한 평탄면을 만듭니다."},
+ {tool:T.met2,nm:"최종 계측 / Wafer Out",proc:2.2,desc:"두께·결함 검사를 마치고 로트가 다음 모듈로 넘어갑니다."},
+];
+
+/* ================= 장비 정보 카드 ================= */
+const CARDS={
+ infra:{t:"스토커 & OHT",b:"팹의 물류 시스템입니다. 천장 레일을 달리는 OHT(Overhead Hoist Transport)가 FOUP을 장비 로드포트에 내려놓고 집어 갑니다. 장비가 아무리 좋아도 물류가 막히면 팹 전체 스루풋이 무너집니다."},
+ clean:{t:"세정 (Cleaning)",b:"파티클 하나가 곧 다이 하나의 불량입니다. 습식 케미컬·린스·건조로 표면을 리셋하며, 전체 공정 중 가장 자주 반복되는 스텝입니다."},
+ fur:{t:"산화/확산 퍼니스",b:"수백 도의 고온에서 SiO₂를 성장시키거나 도펀트를 확산시킵니다. 배치(batch)로 수십 장을 한 번에 처리하는 대표 장비입니다."},
+ pho:{t:"포토 (Track + Scanner)",b:"PR 도포·베이크(트랙) → 노광(스캐너) → 현상(트랙)이 한 몸처럼 붙어 돕니다. 회로의 임계치수(CD)가 여기서 결정되고, 오버레이 정밀도가 수율을 좌우합니다."},
+ etch:{t:"식각 (Etch)",b:"플라즈마 이온이 마스크가 없는 영역을 깎아냅니다. 프로파일 기울기, 선택비, 균일도가 관리 포인트이고 챔버 컨디션(시즈닝)이 재현성을 좌우합니다."},
+ ash:{t:"애싱 / 세정",b:"산소 플라즈마로 PR을 태워 제거합니다. 다음 공정 전 표면을 다시 깨끗하게 만드는 다리 역할입니다."},
+ imp:{t:"이온주입 (Ion Implanter)",b:"이온을 뽑아(소스) 질량 분석으로 원하는 종만 고르고, 가속·스캔해 웨이퍼에 심습니다. Dose는 양, Energy는 깊이, Angle은 채널링을 결정합니다. 빔 전류를 재는 계측 컵의 값이 균일도 보정의 입력이 되므로, 계측 신뢰성이 이 장비의 심장입니다."},
+ rtp:{t:"RTP (급속 열처리)",b:"수 초 만에 1000℃ 부근까지 올렸다 내립니다. 임플란트로 깨진 격자를 회복시키고 도펀트를 자리에 앉히는(활성화) 공정으로, 온도 균일도가 Rs 산포로 직결됩니다."},
+ met:{t:"계측 (TW · Rs)",b:"TW는 어닐 전 격자 손상을, Rs(면저항)는 어닐 후 활성화를 봅니다. 임플란트→어닐→계측은 서로를 검증하는 삼각형입니다. 계측값은 이후 모든 보정의 입력이 됩니다 — 계측이 흔들리면 보정계가 정상 동작할수록 오차가 고착됩니다."},
+ cvd:{t:"CVD (증착)",b:"반응 가스를 흘려 박막을 쌓습니다. 두께 균일도와 스텝 커버리지가 관리 포인트이고, MFC가 가스 유량을 정밀 제어합니다."},
+ cmp:{t:"CMP (평탄화)",b:"슬러리(연마 입자+케미컬)와 패드로 표면을 기계·화학적으로 갈아냅니다. 디싱·에로전을 억제하며 다층 배선을 가능하게 만든 공정입니다."},
+ met2:{t:"최종 계측 / Wafer Out",b:"두께·CD·결함 맵을 확인하고 로트를 출고합니다. 여기서 잡히는 이상의 절반은 '공정'이 아니라 '계측·장비 상태'가 원인입니다 — 그래서 데이터를 의심하는 순서가 중요합니다."},
+};
+
+/* ================= 웨이퍼 단면 ================= */
+const xg=document.getElementById("xsecCv").getContext("2d");
+const xstate={oxide:false,pr:false,etched:false,implant:false,anneal:false,cvd:false,cmp:false};
+function drawX(){
+  const W=246,H=96; xg.clearRect(0,0,W,H);
+  const gx=18,gw=W-36, base=H-18;
+  /* 기판 */
+  xg.fillStyle="#3a4763"; xg.fillRect(gx,base-26,gw,26);
+  /* 임플란트 도핑 */
+  if(xstate.implant){
+    xg.fillStyle=xstate.anneal?"rgba(61,220,151,.85)":"rgba(255,200,87,.8)";
+    const holes=xstate.etched?[[gx+40,34],[gx+150,34]]:[[gx,gw]];
+    for(const [hx,hw] of holes){for(let i=0;i<14;i++){
+      xg.fillRect(hx+4+Math.random()*(hw-8), base-24+Math.random()*8, 2,2);}}
+  }
+  /* 산화막 */
+  if(xstate.oxide){
+    xg.fillStyle="#3e8fa8";
+    if(xstate.etched){ xg.fillRect(gx,base-38,40,12); xg.fillRect(gx+80,base-38,70,12); xg.fillRect(gx+190,base-38,gw-190,12); }
+    else xg.fillRect(gx,base-38,gw,12);
+  }
+  /* PR */
+  if(xstate.pr){
+    xg.fillStyle="#b45bd6";
+    xg.fillRect(gx,base-52,40,14); xg.fillRect(gx+80,base-52,70,14); xg.fillRect(gx+190,base-52,gw-190,14);
+  }
+  /* CVD */
+  if(xstate.cvd){
+    xg.fillStyle="#4d7fe0";
+    if(xstate.cmp) xg.fillRect(gx,base-52,gw,14);
+    else{ xg.fillRect(gx,base-50,gw,10);
+      xg.fillRect(gx+40,base-40,4,10); xg.fillRect(gx+76,base-40,4,10);
+      xg.fillRect(gx+150,base-40,4,10); xg.fillRect(gx+186,base-40,4,10);}
+  }
+  xg.strokeStyle="#22304f"; xg.strokeRect(gx,10,gw,base-10);
+  xg.fillStyle="#5b6d94"; xg.font="9px sans-serif"; xg.textAlign="left";
+  const tags=[["Si 기판","#3a4763"]];
+  if(xstate.oxide)tags.push(["SiO₂","#3e8fa8"]);
+  if(xstate.pr)tags.push(["PR","#b45bd6"]);
+  if(xstate.implant)tags.push([xstate.anneal?"활성화 도펀트":"도펀트(주입)",xstate.anneal?"#3ddc97":"#ffc857"]);
+  if(xstate.cvd)tags.push(["CVD 막","#4d7fe0"]);
+  let tx=gx; for(const [nm,cc] of tags){ xg.fillStyle=cc; xg.fillRect(tx,2,6,6); xg.fillStyle="#7d92bd"; xg.fillText(nm,tx+9,9); tx+=xg.measureText(nm).width+26; }
+}
+function applyX(stepIdx){
+  const id=ROUTE[stepIdx].tool.id;
+  if(id==="fur")xstate.oxide=true;
+  if(id==="pho")xstate.pr=true;
+  if(id==="etc")xstate.etched=true;
+  if(id==="ash")xstate.pr=false;
+  if(id==="imp")xstate.implant=true;
+  if(id==="rtp")xstate.anneal=true;
+  if(id==="cvd")xstate.cvd=true;
+  if(id==="cmp")xstate.cmp=true;
+  drawX();
+}
+drawX();
+
+/* ================= 라우트 패널 ================= */
+const routeEl=document.getElementById("route");
+ROUTE.forEach((r,i)=>{
+  const d=document.createElement("div"); d.className="step"; d.id="rs"+i;
+  d.innerHTML=`<span class="no">${String(i+1).padStart(2,"0")}</span>
+    <div class="mid"><div class="nm">${r.nm}</div><div class="eq">${r.tool.name}</div><div class="bar"><i></i></div></div>
+    <span class="st">WAIT</span><button class="go" data-i="${i}">여기부터 진행</button>`;
+  routeEl.appendChild(d);
+});
+routeEl.addEventListener("click",e=>{
+  const b=e.target.closest(".go"); if(!b)return;
+  jumpTo(+b.dataset.i);
+});
+function paintRoute(idx){
+  ROUTE.forEach((r,i)=>{
+    const el=document.getElementById("rs"+i);
+    el.className="step"+(i===idx?" now":i<idx?" done":"");
+    el.querySelector(".st").textContent=i===idx?"NOW":i<idx?"DONE":"WAIT";
+  });
+  const now=document.getElementById("rs"+idx); now&&now.scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+
+/* ================= 시뮬레이션 FSM ================= */
+const SIM={run:false,paused:false,idx:-1,phase:"idle",t:0,clock:0,speed:2,foupAt:"oht"};
+const logEl=document.getElementById("log");
+const logP=m=>{const mm=String(Math.floor(SIM.clock/60)).padStart(2,"0"),ss=String(Math.floor(SIM.clock%60)).padStart(2,"0");
+  const d=document.createElement("div"); d.innerHTML=`<span class="t">[${mm}:${ss}]</span> ${m}`; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;};
+
+function setStep(i){
+  SIM.idx=i; SIM.phase="move"; SIM.t=0;
+  const r=ROUTE[i];
+  document.getElementById("hudStep").textContent=r.nm;
+  document.getElementById("hudNo").textContent=String(i+1).padStart(2,"0")+" / 12";
+  document.getElementById("ndName").textContent=r.nm+" · "+r.tool.name;
+  document.getElementById("ndPct").textContent="0%";
+  paintRoute(i);
+}
+function jumpTo(i){
+  if(SIM.idx>=0){const tl=ROUTE[SIM.idx].tool; tl.active=false;}
+  for(let k=0;k<ROUTE.length;k++){/* 단면 상태 재구성 */}
+  Object.keys(xstate).forEach(k=>xstate[k]=false);
+  for(let k=0;k<i;k++)applyX(k);
+  drawX();
+  ohtS=loopS(ROUTE[i].tool.railX,ROUTE[i].tool.railZ)-6;
+  SIM.run=true; SIM.paused=false; SIM.foupAt="oht"; foup.visible=true;
+  document.getElementById("btnRun").disabled=true; document.getElementById("btnPause").disabled=false;
+  document.getElementById("btnPause").textContent="⏸ 일시정지"; document.getElementById("btnNext").disabled=true;
+  setStep(i); logP(`STEP ${i+1} (${ROUTE[i].nm})부터 진행`);
+}
+document.getElementById("btnRun").onclick=()=>jumpTo(0);
+document.getElementById("btnPause").onclick=()=>{SIM.paused=!SIM.paused;
+  document.getElementById("btnPause").textContent=SIM.paused?"▶ 재개":"⏸ 일시정지";
+  document.getElementById("btnNext").disabled=!SIM.paused;};
+document.getElementById("btnNext").onclick=()=>{if(SIM.paused)SIM.t=1e9;};
+document.getElementById("btnReset").onclick=()=>location.reload();
+document.getElementById("speed").onchange=e=>SIM.speed=+e.target.value;
+
+function simUpdate(dt){
+  if(!SIM.run||SIM.paused&&SIM.t<1e8)  {if(SIM.paused&&SIM.t<1e8)return;}
+  if(!SIM.run)return;
+  SIM.clock+=dt;
+  const mm=String(Math.floor(SIM.clock/60)).padStart(2,"0"),ss=String(Math.floor(SIM.clock%60)).padStart(2,"0");
+  document.getElementById("hudClock").textContent=mm+":"+ss;
+  const r=ROUTE[SIM.idx], tool=r.tool, sp=SIM.speed;
+  if(SIM.phase==="move"){
+    const target=loopS(tool.railX,tool.railZ);
+    let d=target-ohtS;
+    d=((d%loopLen)+loopLen)%loopLen; /* 한 방향 순환 */
+    const v=16*sp*dt;
+    if(d<v||SIM.t>1e8){ ohtS=target; SIM.phase="load"; SIM.t=0; }
+    else ohtS+=v;
+  }else if(SIM.phase==="load"){
+    SIM.t+=dt*sp/1.1;
+    if(SIM.t>=1){ SIM.t=0; SIM.phase="proc"; SIM.foupAt="port"; tool.active=true;
+      logP(`${tool.name}: FOUP 안착 → 공정 시작`);}
+  }else if(SIM.phase==="proc"){
+    SIM.t+=dt*sp/r.proc;
+    document.getElementById("ndPct").textContent=Math.min(100,SIM.t*100|0)+"%";
+    const bar=document.querySelector("#rs"+SIM.idx+" .bar i"); if(bar)bar.style.width=Math.min(100,SIM.t*100)+"%";
+    if(SIM.t>=1){ SIM.t=0; SIM.phase="unload"; tool.active=false; applyX(SIM.idx);
+      logP(`${r.nm} 완료`);}
+  }else if(SIM.phase==="unload"){
+    SIM.t+=dt*sp/1.1;
+    if(SIM.t>=1){ SIM.t=0; SIM.foupAt="oht";
+      if(SIM.idx+1<ROUTE.length) setStep(SIM.idx+1);
+      else { SIM.run=false; SIM.phase="idle";
+        document.getElementById("hudStep").textContent="LOT 완료";
+        document.getElementById("ndName").textContent="Route Complete";
+        document.getElementById("btnPause").disabled=true; logP("12스텝 전 공정 완료 ✓ — [처음부터]로 재시작");}
+    }
+  }
+  /* FOUP 위치 */
+  const hoistDrop = SIM.phase==="load"? SIM.t : SIM.phase==="unload"? 1-SIM.t : SIM.phase==="proc"?1:0;
+  const p=loopPos(ohtS); oht.position.set(p.x,0,p.z);
+  const dropY=RAIL_Y-2.8-(hoistDrop*(RAIL_Y-3.9));
+  foup.position.y=dropY; hoist.scale.y=1+hoistDrop*6; hoist.position.y=RAIL_Y-1.9-hoistDrop*2.8;
+  lotGlow.position.y=dropY; lotGlow.intensity=SIM.run?0.9:0;
+  /* proc 중에는 FOUP을 포트 위치로 */
+  if(SIM.phase==="proc"){ const pp=ROUTE[SIM.idx].tool.portPos;
+    foup.position.y=pp.y+0.5;
+    oht.position.set(pp.x,0,pp.z+ (ROUTE[SIM.idx].tool.zs>0?-0:0));
+    oht.position.x=pp.x; oht.position.z=loopPos(ohtS).z*0+ROUTE[SIM.idx].tool.railZ; foup.position.y=pp.y+0.4;
+    /* FOUP x,z는 포트 위 */
+    foup.position.x=0; foup.position.z=pp.z-oht.position.z;
+  } else { foup.position.x=0; foup.position.z=0; }
+}
+
+/* ================= 장비 상태 연출 ================= */
+function toolFx(now){
+  for(const t of tools){
+    const on=t.active;
+    t.lamp.material.color.setHex(on?0x3ddc97:(Math.sin(now/900+t.idlePhase)>0.6?0x3ddc97:0xc8a23a));
+    t.scr.material.color.setHex(on?0x2f7fe0:0x14335e);
+    t.body.material.emissive=t.body.material.emissive||new THREE.Color(0);
+    t.body.material.emissive.setHex(on?0x14335e:(t===hoverTool?0x0e2246:0x000000));
+    if(on){ t.g.position.y=Math.sin(now/120)*0.015; } else t.g.position.y=0;
+  }
+}
+
+/* ================= 카메라 컨트롤 (커스텀 오빗) ================= */
+const cam={theta:-0.9,phi:0.98,r:95,target:new THREE.Vector3(2,2,0)};
+let tween=null;
+function camApply(){
+  const sp=Math.sin(cam.phi), x=cam.target.x+cam.r*sp*Math.cos(cam.theta),
+        z=cam.target.z+cam.r*sp*Math.sin(cam.theta), y=cam.target.y+cam.r*Math.cos(cam.phi);
+  camera.position.set(x,y,z); camera.lookAt(cam.target);
+}
+function flyTo(target,r,theta,phi,dur=1.1){
+  tween={t:0,dur,
+    from:{r:cam.r,theta:cam.theta,phi:cam.phi,tg:cam.target.clone()},
+    to:{r,theta:theta!==null?theta:cam.theta,phi:phi!==null?phi:cam.phi,tg:target.clone()}};
+}
+function tweenUpdate(dt){
+  if(!tween)return;
+  tween.t+=dt/tween.dur; const t=tween.t>=1?1:(1-Math.pow(1-tween.t,3));
+  cam.r=tween.from.r+(tween.to.r-tween.from.r)*t;
+  let dth=tween.to.theta-tween.from.theta;
+  dth=((dth+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+  cam.theta=tween.from.theta+dth*t;
+  cam.phi=tween.from.phi+(tween.to.phi-tween.from.phi)*t;
+  cam.target.lerpVectors(tween.from.tg,tween.to.tg,t);
+  if(tween.t>=1)tween=null;
+}
+let dragging=false,panning=false,px=0,py=0;
+cvs.addEventListener("pointerdown",e=>{px=e.clientX;py=e.clientY;
+  if(e.button===2||e.shiftKey)panning=true; else dragging=true; tween=null; showcase=false; paintShow();});
+addEventListener("pointerup",()=>{dragging=panning=false;});
+addEventListener("pointermove",e=>{
+  const dx=e.clientX-px,dy=e.clientY-py;
+  if(dragging){cam.theta+=dx*0.0052; cam.phi=Math.min(1.42,Math.max(0.18,cam.phi-dy*0.004)); px=e.clientX;py=e.clientY;}
+  else if(panning){
+    const s=cam.r*0.0016;
+    const fx=Math.cos(cam.theta),fz=Math.sin(cam.theta);
+    cam.target.x+=(-dx*fz+dy*fx)*s*-1; cam.target.z+=(dx*fx+dy*fz)*s;
+    px=e.clientX;py=e.clientY;}
+  hover(e);
+});
+cvs.addEventListener("wheel",e=>{e.preventDefault();
+  cam.r=Math.min(190,Math.max(14,cam.r*(1+e.deltaY*0.0011))); tween=null;},{passive:false});
+cvs.addEventListener("contextmenu",e=>e.preventDefault());
+
+/* 프리셋 */
+const PRESET={
+  all:()=>flyTo(new THREE.Vector3(2,2,0),95,-0.9,0.98),
+  oht:()=>{trackOHT=true; },
+  bay:()=>flyTo(new THREE.Vector3(41,2,-15),34,-0.6,1.05),
+};
+let trackOHT=false;
+document.querySelectorAll("#camset [data-cam]").forEach(b=>b.onclick=()=>{
+  trackOHT=false;
+  if(b.dataset.cam==="oht"){trackOHT=true;}
+  else PRESET[b.dataset.cam]();
+});
+let showcase=false;
+const btnShow=document.getElementById("btnShow");
+function paintShow(){btnShow.classList.toggle("on",showcase);}
+btnShow.onclick=()=>{showcase=!showcase; paintShow(); if(showcase&&!SIM.run)jumpTo(0);};
+
+/* ================= 픽킹 ================= */
+const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+let hoverTool=null;
+const tip=document.getElementById("tip");
+function hover(e){
+  const r=cvs.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  ray.setFromCamera(mouse,camera);
+  const hit=ray.intersectObjects(pickables)[0];
+  hoverTool=hit?hit.object.userData.tool:null;
+  cvs.style.cursor=hoverTool?"pointer":"default";
+  if(hoverTool){tip.style.display="block"; tip.style.left=e.clientX-r.left+"px"; tip.style.top=e.clientY-r.top+"px";
+    tip.textContent=hoverTool.name;}
+  else tip.style.display="none";
+}
+cvs.addEventListener("click",e=>{
+  hover(e); if(!hoverTool)return;
+  const t=hoverTool;
+  trackOHT=false;
+  flyTo(new THREE.Vector3(t.x,2.2,t.z),26,-0.55+(t.zs>0?Math.PI:0),1.02);
+  const card=CARDS[t.info]||{t:t.name,b:"장비 정보"};
+  document.querySelector("#info h3").textContent=card.t+" — "+t.name;
+  document.querySelector("#info p").textContent=card.b;
+  const h=document.querySelector("#info .hint"); h&&h.remove();
+});
+
+/* ================= 키보드 ================= */
+addEventListener("keydown",e=>{
+  if(e.code==="Space"){e.preventDefault();
+    if(!SIM.run)jumpTo(0); else document.getElementById("btnPause").click();}
+  if(e.key==="n"||e.key==="N")document.getElementById("btnNext").click();
+  if(e.key==="r"||e.key==="R")location.reload();
+  if(e.key>="1"&&e.key<="3")["all","oht","bay"][+e.key-1]&&(trackOHT=false,e.key==="2"?trackOHT=true:PRESET[["all","oht","bay"][+e.key-1]]());
+});
+
+/* ================= 루프 ================= */
+function resize(){
+  const r=stage.getBoundingClientRect();
+  renderer.setSize(r.width,r.height,false);
+  camera.aspect=r.width/r.height; camera.updateProjectionMatrix();
+}
+addEventListener("resize",resize); resize();
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000,0.1); last=now;
+  simUpdate(dt); tweenUpdate(dt); toolFx(now);
+  if(showcase&&!tween){cam.theta+=dt*0.07;}
+  if(trackOHT&&!tween){cam.target.lerp(new THREE.Vector3(oht.position.x,4,oht.position.z),0.08); cam.r+= (30-cam.r)*0.05;}
+  camApply();
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+logP("FAB 초기화 완료 — Wafer 투입 대기");
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
